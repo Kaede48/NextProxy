@@ -1,19 +1,17 @@
 use warp::Filter;
-use dialoguer::Input;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
+use get_if_addrs::get_if_addrs;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Starting NextProxy server...");
 
-    // Prompt the user to input the IP address
-    let ip_address: String = Input::new()
-        .with_prompt("Enter IP address")
-        .interact_text()?;
+    // Find the local IPv4 address
+    let ip_address = find_local_ipv4().unwrap_or_else(|| IpAddr::V4("127.0.0.1".parse().unwrap()));
     let port = 8080; // default bind port 
 
     // Define the address to bind the server to
-    let addr = format!("{}:{}", ip_address, port);
+    let addr = SocketAddr::new(ip_address, port);
 
     // Define a warp filter for the root URL
     let root = warp::path::end().map(|| {
@@ -31,10 +29,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Start the warp server
     warp::serve(routes)
-        .run(addr.parse::<SocketAddr>()?)
+        .run(addr)
         .await;
 
     println!("NextProxy server started.");
 
     Ok(())
+}
+
+// Function to find the local IPv4 address
+fn find_local_ipv4() -> Option<IpAddr> {
+    if let Ok(ifaces) = get_if_addrs() {
+        for iface in ifaces {
+            if !iface.is_loopback() && iface.ip().is_ipv4() {
+                return Some(iface.ip());
+            }
+        }
+    }
+    None
 }
