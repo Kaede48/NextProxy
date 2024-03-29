@@ -1,50 +1,39 @@
-use warp::Filter;
-use std::net::{IpAddr, SocketAddr};
-use get_if_addrs::get_if_addrs;
+use std::net::{IpAddr, SocketAddr, Ipv4Addr};
+use warp::{Filter, reply::html, Rejection};
+use reqwest::{Client, Error};
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    println!("Starting NextProxy server...");
 
-    // Find the local IPv4 address
-    let ip_address = find_local_ipv4().unwrap_or_else(|| IpAddr::V4("127.0.0.1".parse().unwrap()));
-    let port = 8080; // default bind port 
-
-    // Define the address to bind the server to
-    let addr = SocketAddr::new(ip_address, port);
-
-    // Define a warp filter for the root URL
-    let root = warp::path::end().map(|| {
-        "Welcome to your binded web server! This is only the beginning."
-    });
-
-    // Define a warp filter for the /hello route
-    let hello = warp::path("hello").and(warp::path::param()).map(|name: String| {
-        // Replace this with your custom response for the /hello route
-        format!("Hello, {}!", name)
-    });
-
-    // Combine the root and hello filters
-    let routes = root.or(hello);
-
-    // Start the warp server
-    warp::serve(routes)
-        .run(addr)
-        .await;
-
-    println!("NextProxy server started.");
-
-    Ok(())
-}
-
-// Function to find the local IPv4 address
-fn find_local_ipv4() -> Option<IpAddr> {
-    if let Ok(ifaces) = get_if_addrs() {
-        for iface in ifaces {
-            if !iface.is_loopback() && iface.ip().is_ipv4() {
-                return Some(iface.ip());
+async fn fetch_response(target: String) -> Result<impl warp::Reply, Rejection> {
+    let target_url = format!("http://{}", target);
+    let client = Client::new();
+    match client.get(&target_url).send().await {
+        Ok(res) => {
+            let body = res.bytes().await;
+            match body {
+                Ok(body_bytes) => Ok(html(body_bytes)),
+                Err(_) => Ok(html("Error occurred".to_string().into())),
             }
         }
+        Err(_) => Ok(html("Error occurred".to_string().into())),
     }
-    None
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Error> {
+    println!("Starting NextProxy server...");
+
+    let ip_address = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)); // Listen on all interfaces
+    let port = 8088;
+    let addr = SocketAddr::new(ip_address, port);
+
+    let routes = warp::path!("proxy" / String)
+        .and_then(fetch_response);
+
+    let warp_server = warp::serve(routes).bind(addr);
+
+    println!("NextProxy server started with Warp at 0.0.0.0:{}", port);
+
+    warp_server.await;
+
+    Ok(())
 }
