@@ -43,6 +43,8 @@ http://your_public_ip:8088
 
 The local address for your machine will also work as a fallback and the loopback address (127.0.0.1) also works if you want this to run locally. 
 
-There are still issues with the server that I need to resolve. For example, I need to upgrade this to tls and get the traffic encrypted as well as fix some issues where the server wont fully act on certain urls. For example, http://your_public_ip:8088/proxy/youtube.com will bring you to Youtube, but cannot go further and watch videos. 
+There are still issues with the server that I need to resolve. For example, I need to upgrade this to tls and get the traffic encrypted as well as fix some issues where the server wont fully act on certain urls. For example, http://your_public_ip:8088/proxy/youtube.com will bring you to Youtube, but cannot go further and watch videos. This is still a WIP and will be going getting updates as I learn more. 
 
 I see this basic proxy server being ran on an ip in the cloud and it forwarding requests for ethical hacking which is the end goal for this project. I want this server to be able to take the requests a user sends it (encrypted) and forward them for web-based pen testing. It provides a layer of security by having the data being routed through an obscure port and different address. 
+
+Thank you for trying this project. 
